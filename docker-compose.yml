@@ -5,6 +5,7 @@
 # Pour environnement host sous Ubuntu:
 # - Modifier le fichier /etc/default/grub (sudo vim /etc/default/grub)
 # - Ajouter transparent_hugepage=never au paramètre GRUB_CMDLINE_LINUX_DEFAULT (GRUB_CMDLINE_LINUX_DEFAULT="transparent_hugepage=never")
+# - Ajouter cgroup_enable=memory swapaccount=1 au paramètre GRUB_CMDLINE_LINUX (GRUB_CMDLINE_LINUX="cgroup_enable=memory swapaccount=1")
 # - Lancer "sudo update-grub"
 # - Modifier le fichier /etc/sysctl.conf (sudo vim /etc/sysctl.conf)
 # - Ajouter les lignes suivantes
