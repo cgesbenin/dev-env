@@ -15,7 +15,7 @@
 # - Redémarrer la machine (sudo shutdown -r now)
 #
 # - Pour exécuter les commandes composer, npm et php (dont php artisan), vous devez entrer dans le container php-nginx:
-#   docker exec -it sgesss_php-nginx_1 bash
+#   docker exec -it php-nginx_1 bash
 #   composer et npm sont déjà installés dans le container de même de l'éxécutable wkhtml2pdf
 #   Le répertoire par défaut est celui de laravel.
 #   De cette manière, nous nous assurons que tous les développeurs utilisent les mêmes version de composer et npm
