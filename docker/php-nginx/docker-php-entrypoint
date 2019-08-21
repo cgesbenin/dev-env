@@ -1,0 +1,51 @@
+#!/bin/sh
+set -e
+
+# first arg is `-f` or `--some-option`
+if [ "${1#-}" != "$1" ]; then
+	set -- php-fpm "$@"
+fi
+
+role=${CONTAINER_ROLE:-app}
+env=${APP_ENV:-production}
+
+
+
+echo "Writing the php-fpm config"
+{ \
+    echo listen = /var/run/php-fpm.sock; \
+    echo listen.owner = www-data; \
+    echo listen.group = www-data; \
+    echo ping.path = /ping; \
+    echo pm.status_path = /status; \
+    echo pm.max_children = "$FPM_PM_MAX_CHILDREN"; \
+    echo pm.start_servers = "$FPM_PM_START_SERVERS"; \
+    echo pm.min_spare_servers = "$FPM_PM_MIN_SPARE_SERVERS"; \
+    echo pm.max_spare_servers = "$FPM_PM_MAX_SPARE_SERVERS"; \
+} > /usr/local/etc/php-fpm.d/zzz-app.conf
+
+
+if [ "$role" = "app" ]; then
+
+    echo "Starting application..."
+
+elif [ "$role" = "queue" ]; then
+
+    echo "Running the queue..."
+    php /var/www/app/artisan queue:work --verbose --tries=3 --timeout=90
+
+elif [ "$role" = "scheduler" ]; then
+
+    echo "Running the scheduler..."
+    while [ true ]
+    do
+      php /var/www/app/artisan schedule:run --verbose --no-interaction &
+      sleep 60
+    done
+
+else
+    echo "Could not match the container role \"$role\""
+    exit 1
+fi
+
+exec "$@"

@@ -1,0 +1,114 @@
+# ******************* Important *******************
+#
+# Environnement de développement du SGESSS
+#
+# Pour environnement host sous Ubuntu:
+# - Modifier le fichier /etc/default/grub (sudo vim /etc/default/grub)
+# - Ajouter transparent_hugepage=never au paramètre GRUB_CMDLINE_LINUX_DEFAULT (GRUB_CMDLINE_LINUX_DEFAULT="transparent_hugepage=never")
+# - Lancer "sudo update-grub"
+# - Modifier le fichier /etc/sysctl.conf (sudo vim /etc/sysctl.conf)
+# - Ajouter les lignes suivantes
+#   vm.swappiness=0
+#   vm.overcommit_memory=1
+#   fs.inotify.max_user_watches=524288
+# - (La troisième ligne est facultative, seulement nécessaire pour la gestions des fichiers dans VSCode avec npm et composer)
+# - Redémarrer la machine (sudo shutdown -r now)
+#
+# - Pour exécuter les commandes composer, npm et php (dont php artisan), vous devez entrer dans le container php-nginx:
+#   docker exec -it sgesss_php-nginx_1 bash
+#   composer et npm sont déjà installés dans le container de même de l'éxécutable wkhtml2pdf
+#   Le répertoire par défaut est celui de laravel.
+#   De cette manière, nous nous assurons que tous les développeurs utilisent les mêmes version de composer et npm
+#   Pour sortir du container, tapez simplement "exit"
+#
+# **************************************************
+
+
+version: "3.7"
+volumes:
+  postgis-data:
+  geoserver-data:
+  redis-data:
+networks:
+  frontend:
+  backend:
+services:
+  php-nginx:
+    build:
+      context: ./docker/php-nginx
+      dockerfile: ./php-nginx.dockerfile
+    image: php-nginx:dev
+    depends_on:
+      - postgis
+      - redis
+      - geoserver
+    working_dir: /var/www/app
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./:/var/www/app:rw
+      - ./docker/php-nginx/config/php.ini:/usr/local/etc/php/php.ini
+    networks:
+      - frontend
+      - backend
+    environment:
+      APP_ENV: local
+      CONTAINER_ROLE: app
+
+  # queue:
+  #   image: php-nginx:dev
+  #   depends_on:
+  #     - php-nginx
+  #   working_dir: /var/www
+  #   volumes:
+  #     - ./:/var/www/app:rw
+  #     - ./docker/php-nginx/config/php.ini:/usr/local/etc/php/php.ini
+  #   networks:
+  #     - backend
+  #   environment:
+  #     APP_ENV: local
+  #     CONTAINER_ROLE: queue
+
+  postgis:
+    build:
+      context: ./docker/postgis
+      dockerfile: ./postgis.dockerfile
+    image: postgis:dev
+    volumes:
+      - postgis-data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
+    env_file:
+      - ./docker/postgis/postgis.env
+    networks:
+      - backend
+
+  geoserver:
+    build:
+      context: ./docker/geoserver
+      dockerfile: ./geoserver.dockerfile
+    image: geoserver:dev
+    depends_on:
+      - postgis
+    volumes:
+      - geoserver-data:/opt/geoserver/data_dir
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - ./docker/geoserver/geoserver.env
+    networks:
+      - backend
+  redis:
+    build:
+      context: ./docker/redis
+      dockerfile: ./redis.dockerfile
+    image: redis:dev
+    sysctls:
+      - net.core.somaxconn=511
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - backend
